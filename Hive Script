@@ -1,0 +1,22 @@
+Loading data into hdfs:
+
+[root@swap ~]# hadoop fs -put /home/matlab/HVAC%20Project/building.csv /user/hive/warehouse/building.csv
+
+[root@swap ~]# hadoop fs -put /home/matlab/HVAC%20Project/building.csv /user/hive/warehouse/HVAC.csv
+
+
+hive script:
+
+hive> create table building(buildingid int, buildingmgr string, buildingage int, hvacproduct string, country string) row format delimited fields terminated by','stored as textfile;
+
+hive> load data inpath '/user/hive/warehouse/building.csv' into table building;
+
+hive> create table hvac(dmy string, time string, targettemp int, actualtemp int,system int, systemage int, buildingid int)row format delimited fields terminated by ','stored as textfile;
+
+hive> load data inpath '/user/hive/warehouse/HVAC.csv' into table hvac;
+
+hive> create table hvac_temp row format delimited fields terminated by ','as select *, targettemp-actualtemp as temp_diff, IF((targettemp-actualtemp)>5,'COLD', IF((targettemp-actualtemp<-5), 'HOT','NORMAL'))as temprange,IF((targettemp-actualtemp)>5,'1',IF((targettemp-actualtemp)<-5,'1','0')) as tempextreme from hvac;
+
+hive>create table if not exists result row format delimited fields terminated by ',' as select h.buildingid, h.temprange, h.tempextreme, b.country, b.hvacproduct from building b join hvac_temp h on b.buildingid=h.buildingid;
+
+[root@swap ~]#hadoop fs -copyToLocal /user/hive/warehouse/swap.db/result/000000_0 /home/matlab/HVAC%20project/
